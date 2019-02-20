@@ -83,14 +83,6 @@
 			debounce-interval = <15>;
 		};
 
-		//camera_snapshot {
-		//	label = "camera_snapshot";
-		//	gpios = <&tlmm 127 0x1>;
-		//	linux,input-type = <1>;
-		//	linux,code = <0x2fe>;
-		//	debounce-interval = <15>;
-		//};
-
 		vol_up {
 			label = "volume_up";
 			gpios = <&tlmm 91 0x1>;
@@ -122,7 +114,7 @@
 		ah,gpio_irq = <&tlmm 41 0x00>;
 		linux,name = "hall_sensor";	
 	};	
-/*added by chenhui for goodix fingerprint*/
+
     goodix@0 {
         compatible = "goodix,fingerprint";
         spi-max-frequency = <4800000>;
@@ -133,7 +125,6 @@
         goodix,gpio_reset = <&tlmm 98 0>;
         goodix,gpio_irq = <&tlmm 97 0>;
     }; 
-/*added by chenhui for goodix fingerprint*/	
 
     gen-vkeys {
 		compatible = "qcom,gen-vkeys";
@@ -155,18 +146,18 @@
 &pmi_haptic{
 	qcom,actuator-type = "erm";
 };
-//lll054850 add for aw87319 20161128
+
 &i2c_2 {
-		aw87319_i2c@58{
-	        compatible = "awinic,aw87319_pa";
-	        reg = <0x58>;
-	        awinic,ext_pa_spk_aw87319_rst = <&tlmm 68 0x01>;
-	        pinctrl-names = "aw87319_pa_active", "aw87319_pa_off";
-	        pinctrl-0 = <&aw87319_rst_high>;
-	        pinctrl-1 = <&aw87319_rst_low>;	
-        };
+	aw87319_i2c@58{
+	    compatible = "awinic,aw87319_pa";
+	    reg = <0x58>;
+	    awinic,ext_pa_spk_aw87319_rst = <&tlmm 68 0x01>;
+	    pinctrl-names = "aw87319_pa_active", "aw87319_pa_off";
+	    pinctrl-0 = <&aw87319_rst_high>;
+	    pinctrl-1 = <&aw87319_rst_low>;	
+    };
 };
-//lll054850 add for aw87319 20161128
+
 &i2c_5 { /* BLSP2 QUP1 */
 	nq@28 {
 		compatible = "qcom,nq-nci";
@@ -269,7 +260,7 @@
 };
 //modify by yujianhua start
 &mdss_dsi0 {
-	qcom,dsi-pref-prim-pan = <&dsi_hx8399c_lead_1080p_video>;
+	qcom,dsi-pref-prim-pan = <&dsi_ili9881c_skyworth_720p_video>;
 	pinctrl-names = "mdss_default", "mdss_sleep";
 	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
 	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
@@ -295,49 +286,22 @@
 };
 
 &dsi_truly_1080_vid {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-	qcom,mdss-dsi-pan-enable-dynamic-fps;
-	qcom,mdss-dsi-pan-fps-update = "dfps_immediate_porch_mode_vfp";
+       qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+       qcom,mdss-dsi-pan-enable-dynamic-fps;
+       qcom,mdss-dsi-pan-fps-update = "dfps_immediate_porch_mode_vfp";
 };
 
 &dsi_truly_1080_cmd {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-	qcom,ulps-enabled;
-	qcom,partial-update-enabled;
-	qcom,panel-roi-alignment = <2 2 4 2 1080 2>;
+       qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+       qcom,ulps-enabled;
+       qcom,partial-update-enabled;
+       qcom,panel-roi-alignment = <2 2 4 2 1080 2>;
 };
 
 &dsi_truly_720_vid {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-	qcom,mdss-dsi-pan-enable-dynamic-fps;
-	qcom,mdss-dsi-pan-fps-update = "dfps_immediate_porch_mode_vfp";
-};
-
-//add by yujianhua start
-&dsi_hx8394f_jdf_720p_video {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-};
-&dsi_nt35521_dijing_720_vid {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-};
-//add by yujianhua end
-
-//add by zhanglian start
-&dsi_hx8399c_lead_1080p_video {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-};
-//add by zhanglian end
-
-&dsi_otm1911a_1080p_video {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-};
-
-&dsi_td4300_boe_1080p_video {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
-};
-
-&dsi_td4310_tianma_1080p_video {
-	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+       qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+       qcom,mdss-dsi-pan-enable-dynamic-fps;
+       qcom,mdss-dsi-pan-fps-update = "dfps_immediate_porch_mode_vfp";
 };
 
 &dsi_ili9881c_skyworth_720p_video {

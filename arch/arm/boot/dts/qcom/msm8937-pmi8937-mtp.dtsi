@@ -16,21 +16,27 @@
 #include "msm8937-audio-mtp.dtsi"
 
 &soc {
-	led_flash0: qcom,camera-flash {
+	led_flash0: qcom,camera-flash@0 {
 		cell-index = <0>;
 		compatible = "qcom,camera-flash";
 		qcom,flash-type = <1>;
-		qcom,flash-source = <&pmi8937_flash0 &pmi8937_flash1>;
-		qcom,torch-source = <&pmi8937_torch0 &pmi8937_torch1>;
-		qcom,switch-source = <&pmi8937_switch>;
+		qcom,flash-source = <&pmi8937_flash0>;
+		qcom,torch-source = <&pmi8937_torch0>;
+	};
+	led_flash1: qcom,camera-flash@1 {
+		cell-index = <1>;
+		compatible = "qcom,camera-flash";
+		qcom,flash-type = <1>;
+		qcom,flash-source = <&pmi8937_flash1>;
+		qcom,torch-source = <&pmi8937_torch1>;
 	};
 };
 
 /{
 	mtp_batterydata: qcom,battery-data {
 		qcom,batt-id-range-pct = <15>;
-		#include "batterydata-itech-3000mah.dtsi"
-		#include "batterydata-ascent-3450mAh.dtsi"
+		#include "batterydata-coslight-20k-2800mAh_v2.dtsi"
+		#include "batterydata-lg-180k-2800mAh_v2.dtsi"
 	};
 };
 
@@ -40,6 +46,6 @@
 
 &pmi8937_charger {
 	qcom,battery-data = <&mtp_batterydata>;
-	qcom,chg-led-sw-controls;
-	qcom,chg-led-support;
+	/*qcom,chg-led-sw-controls;*/
+/*	qcom,chg-led-support;*/
 };
