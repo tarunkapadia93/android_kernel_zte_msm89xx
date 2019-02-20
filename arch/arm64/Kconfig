@@ -339,6 +339,12 @@ config ARCH_MSM8994_V1_TLBI_WA
 	  [39:38] bits of VA are tied to zero and due to which TLBI
 	  operations with VA or ASID will not work.
 
+config ZTE_V8_MINI
+	bool "ZTE V8 MINI PROJECT"
+	depends on ARCH_MSM8940
+	help
+		Enable support for ZTE V8 MINI (P840F10)
+
 endmenu
 
 menu "Bus support"
