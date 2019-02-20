@@ -16,13 +16,13 @@
 &int_codec {
 	qcom,model = "msm8952-snd-card-mtp";
 
-	qcom,cdc-us-euro-gpios = <&tlmm 63 0>;
-	qcom,msm-mbhc-hphl-swh = <0>;
-	qcom,msm-mbhc-gnd-swh = <0>;
-	qcom,msm-hs-micbias-type = "external";
+	qcom,cdc-us-euro-gpios = <&tlmm 63 0>;    
+	qcom,msm-mbhc-hphl-swh = <1>;
+	qcom,msm-mbhc-gnd-swh = <1>;
+	qcom,msm-hs-micbias-type = "internal";
 	qcom,msm-micbias1-ext-cap;
-
-	qcom,hdmi-dba-codec-rx;
+    qcom,msm-spk-ext-pa = <&tlmm 68 0>; //lll054850 add for aw8736 20161130
+	//qcom,hdmi-dba-codec-rx;  //weiguohua
 
 	qcom,msm-gpios =
 		"pri_i2s",
@@ -83,7 +83,7 @@
 	qcom,msm-mbhc-hphl-swh = <0>;
 	qcom,msm-mbhc-gnd-swh = <0>;
 
-	qcom,hdmi-dba-codec-rx;
+	//qcom,hdmi-dba-codec-rx;  //weiguohua
 
 	qcom,msm-gpios =
 		"quin_i2s",

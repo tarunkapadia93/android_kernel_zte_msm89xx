@@ -314,26 +314,26 @@
 			    "csr_gp_io_mux_quin_ctl";
 
 		qcom,msm-ext-pa = "primary";
+		qcom,msm-spk-ext-pa = <&tlmm 68 0>; //lll054850 add for aw8736 20161130
 		qcom,msm-mclk-freq = <9600000>;
 		qcom,msm-mbhc-hphl-swh = <0>;
 		qcom,msm-mbhc-gnd-swh = <0>;
-		qcom,msm-hs-micbias-type = "external";
+		qcom,msm-hs-micbias-type = "internal";
 		qcom,msm-micbias1-ext-cap;
 		qcom,audio-routing =
 			"RX_BIAS", "MCLK",
 			"SPK_RX_BIAS", "MCLK",
 			"INT_LDO_H", "MCLK",
 			"MIC BIAS External", "Handset Mic",
-			"MIC BIAS External2", "Headset Mic",
+			"MIC BIAS Internal2", "Headset Mic",
 			"MIC BIAS External", "Secondary Mic",
 			"AMIC1", "MIC BIAS External",
-			"AMIC2", "MIC BIAS External2",
-			"AMIC3", "MIC BIAS External",
-			"WSA_SPK OUT", "VDD_WSA_SWITCH",
-			"SpkrMono WSA_IN", "WSA_SPK OUT";
+			"AMIC2", "MIC BIAS Internal2",
+			"AMIC3", "MIC BIAS External";
+			//"WSA_SPK OUT", "VDD_WSA_SWITCH",
+			//"SpkrMono WSA_IN", "WSA_SPK OUT";
 
-		qcom,hdmi-dba-codec-rx;
-
+		//qcom,hdmi-dba-codec-rx;        
 		qcom,msm-gpios =
 			"pri_i2s",
 			"us_eu_gpio",
@@ -467,7 +467,7 @@
 			"SpkrLeft IN", "SPK1 OUT",
 			"SpkrRight IN", "SPK2 OUT";
 
-		qcom,hdmi-dba-codec-rx;
+		//qcom,hdmi-dba-codec-rx;
 
 		qcom,msm-gpios =
 			"quin_i2s",
@@ -538,6 +538,7 @@
 
 	i2c@78b6000 {
 		wsa881x_i2c_e: wsa881x-i2c-codec@e {
+		/*
 			status = "disabled";
 			compatible = "qcom,wsa881x-i2c-codec";
 			reg = <0x0e>;
@@ -568,6 +569,7 @@
 			pinctrl-5 = <&wsa_clk_on &wsa_reset_off &wsa_vi_on>;
 			pinctrl-6 = <&wsa_clk_off &wsa_reset_on &wsa_vi_on>;
 			pinctrl-7 = <&wsa_clk_on &wsa_reset_on &wsa_vi_on>;
+			*/
 		};
 		wsa881x_i2c_44: wsa881x-i2c-codec@44 {
 			status = "disabled";

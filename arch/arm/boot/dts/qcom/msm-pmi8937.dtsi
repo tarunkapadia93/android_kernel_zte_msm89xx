@@ -175,15 +175,20 @@
 			#size-cells = <1>;
 
 			qcom,iterm-ma = <100>;
-			qcom,float-voltage-mv = <4200>;
+			qcom,float-voltage-mv = <4400>;
 			qcom,resume-delta-mv = <200>;
+			qcom,fastchg-current-comp = <700>;
+			qcom,usb-icl-comp = <1000>;
+			
+			qcom,float-voltage-comp-warm = <11>;  /*it should be 11, according to the hardware register description. ZSW-lixinghe. 20170124*/
+			qcom,float-voltage-comp-cool = <0>;
+			qcom,float-voltage-comp = <0>;
+			
+			qcom,bmd-pin-src = "bpd_thm";
 			qcom,chg-inhibit-fg;
 			qcom,rparasitic-uohm = <100000>;
 			qcom,bms-psy-name = "bms";
-			qcom,thermal-mitigation = <1500 700 600 0>;
-			qcom,parallel-usb-min-current-ma = <1400>;
-			qcom,parallel-usb-9v-min-current-ma = <900>;
-			qcom,parallel-allowed-lowering-ma = <500>;
+			qcom,thermal-mitigation = <1500 1000 700 0>;
 			qcom,pmic-revid = <&pmi8937_revid>;
 			qcom,force-aicl-rerun;
 			qcom,aicl-rerun-period-s = <180>;
@@ -289,16 +294,19 @@
 			compatible = "qcom,qpnp-fg";
 			#address-cells = <1>;
 			#size-cells = <1>;
-			qcom,resume-soc = <95>;
+			qcom,resume-soc = <99>;
 			status = "okay";
 			qcom,bcl-lm-threshold-ma = <127>;
 			qcom,bcl-mh-threshold-ma = <405>;
 			qcom,fg-iterm-ma = <150>;
 			qcom,fg-chg-iterm-ma = <100>;
 			qcom,pmic-revid = <&pmi8937_revid>;
-			qcom,fg-cutoff-voltage-mv = <3500>;
+			qcom,fg-cutoff-voltage-mv = <3400>;
 			qcom,cycle-counter-en;
 			qcom,capacity-learning-on;
+			qcom,hold-soc-while-full;
+			qcom,thermal-coefficients = [EC 85 75 4A FC 35];
+			qcom,fg-cc-cv-threshold-mv = <4390>;
 
 			qcom,fg-soc@4000 {
 			status = "okay";
@@ -422,6 +430,7 @@
 			qcom,hyb-thres = <625>;
 			qcom,sync-dly-us = <800>;
 			qcom,fs-curr-ua = <20000>;
+			qcom,en-cabc;
 			qcom,led-strings-list = [00 01];
 			qcom,en-ext-pfet-sc-pro;
 			qcom,cons-sync-write-delay-us = <1000>;
@@ -458,7 +467,7 @@
 				qcom,max-current = <1000>;
 				qcom,duration = <1280>;
 				qcom,id = <0>;
-				qcom,current = <625>;
+				qcom,current = <1000>;
 			};
 
 			pmi8937_flash1: qcom,flash_1 {
@@ -466,10 +475,10 @@
 				qcom,led-name = "led:flash_1";
 				qcom,default-led-trigger =
 						"flash1_trigger";
-				qcom,max-current = <1000>;
+				qcom,max-current = <200>;
 				qcom,duration = <1280>;
 				qcom,id = <1>;
-				qcom,current = <625>;
+				qcom,current = <200>;
 			};
 
 			pmi8937_torch0: qcom,torch_0 {
@@ -480,6 +489,9 @@
 				qcom,max-current = <200>;
 				qcom,id = <0>;
 				qcom,current = <120>;
+                          reg0 {
+                                regulator-name = "pon_spare_reg";
+                               };
 			};
 
 			pmi8937_torch1: qcom,torch_1 {
@@ -487,20 +499,9 @@
 				qcom,led-name = "led:torch_1";
 				qcom,default-led-trigger =
 						"torch1_trigger";
-				qcom,max-current = <200>;
+				qcom,max-current = <150>;
 				qcom,id = <1>;
 				qcom,current = <120>;
-			};
-
-			pmi8937_switch: qcom,switch {
-				label = "switch";
-				qcom,led-name = "led:switch";
-				qcom,default-led-trigger =
-						"switch_trigger";
-				qcom,max-current = <1000>;
-				qcom,duration = <1280>;
-				qcom,id = <2>;
-				qcom,current = <625>;
 				reg0 {
 					regulator-name = "pon_spare_reg";
 				};
@@ -516,9 +517,9 @@
 			vcc_pon-supply = <&pon_perph_reg>;
 			qcom,play-mode = "direct";
 			qcom,wave-play-rate-us = <5263>;
-			qcom,actuator-type = "lra";
+			qcom,actuator-type = "erm";
 			qcom,wave-shape = "square";
-			qcom,vmax-mv = <2000>;
+			qcom,vmax-mv = <3300>;
 			qcom,ilim-ma = <800>;
 			qcom,sc-deb-cycles = <8>;
 			qcom,int-pwm-freq-khz = <505>;
@@ -529,11 +530,6 @@
 			qcom,wave-samples = [3e 3e 3e 3e 3e 3e 3e 3e];
 			qcom,wave-rep-cnt = <1>;
 			qcom,wave-samp-rep-cnt = <1>;
-			qcom,lra-auto-res-mode="qwd";
-			qcom,lra-high-z="opt1";
-			qcom,lra-res-cal-period = <4>;
-			qcom,correct-lra-drive-freq;
-			qcom,misc-trim-error-rc19p2-clk-reg-present;
 		};
 	};
 };

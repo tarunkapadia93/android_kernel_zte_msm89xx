@@ -14,6 +14,31 @@
 #include "msm8937-pinctrl.dtsi"
 #include "msm8937-camera-sensor-mtp.dtsi"
 
+/* add by wkh begin*/
+&i2c_3 { /* BLSP1 QUP3 */
+        focaltech@38{
+			compatible = "focaltech,fts_ts";
+			reg = <0x38>;
+			interrupt-parent = <&tlmm>;
+			interrupts = <65 0x2>;
+			avdd-supply = <&pm8937_l17>;
+			vdd-supply = <&pm8937_l6>;
+			focaltech,family-id = <0x06>;
+			focaltech,reset-gpio = <&tlmm 64 0x0>;
+			focaltech,irq-gpio = <&tlmm 65 0x2008>;
+			focaltech,display-coords = <0 0 720 1280>;
+			focaltech,panel-coords = <0 0 720 1280>;
+			focaltech,button-map= <158 172 139>;
+			focaltech,hard-reset-delay-ms = <20>;
+			focaltech,soft-reset-delay-ms = <150>;
+			focaltech,num-max-touches = <5>;
+			focaltech,no-force-update;
+			focaltech,i2c-pull-up;
+			focaltech,resume-in-workqueue;
+		};
+};
+/*  end by wkh */
+
 &flash_led {
 	compatible = "qcom,qpnp-flash-led";
 	reg = <0xd300 0x100>;
@@ -28,6 +53,20 @@
 };
 
 &soc {
+
+	gpio_leds {
+		compatible = "gpio-modem-leds";
+		status = "okay";
+		pinctrl-names = "default";
+		pinctrl-0 = <&gpio_led_off>;
+		qcom,red-led = <&tlmm 125 0x1>; 
+		qcom,green-led = <&tlmm 124 0x1>; 
+		/*qcom,trickle_red-led = <&tlmm 3 0x1>;*/
+		qcom,blink-on-time = <500>;
+		qcom,blink-off-time = <1500>;
+	};  
+	
+
 	gpio_keys {
 		compatible = "gpio-keys";
 		input-name = "gpio-keys";
@@ -35,27 +74,37 @@
 		pinctrl-0 = <&gpio_key_active>;
 		pinctrl-1 = <&gpio_key_suspend>;
 
-		camera_focus {
-			label = "camera_focus";
+        home {
+			label = "home";
 			gpios = <&tlmm 128 0x1>;
 			linux,input-type = <1>;
-			linux,code = <0x210>;
+			linux,code = <172>;
+			gpio-key,wakeup;    //add by xueqiang 1114
 			debounce-interval = <15>;
 		};
 
-		camera_snapshot {
-			label = "camera_snapshot";
-			gpios = <&tlmm 127 0x1>;
-			linux,input-type = <1>;
-			linux,code = <0x2fe>;
-			debounce-interval = <15>;
-		};
+		//camera_snapshot {
+		//	label = "camera_snapshot";
+		//	gpios = <&tlmm 127 0x1>;
+		//	linux,input-type = <1>;
+		//	linux,code = <0x2fe>;
+		//	debounce-interval = <15>;
+		//};
 
 		vol_up {
 			label = "volume_up";
 			gpios = <&tlmm 91 0x1>;
 			linux,input-type = <1>;
 			linux,code = <115>;
+			debounce-interval = <15>;
+		};
+
+        vol_down {
+			label = "volume_down";
+			gpios = <&tlmm 127 0x1>;
+			linux,input-type = <1>;
+			linux,code = <114>;
+			gpio-key,wakeup;
 			debounce-interval = <15>;
 		};
 	};
@@ -67,6 +116,34 @@
 		qcom,dig-vtg-min = <1800000>;
 		qcom,dig-vtg-max = <1800000>;
 	};
+
+	hall_sensor {
+		compatible = "ah,hall_ic";		
+		ah,gpio_irq = <&tlmm 41 0x00>;
+		linux,name = "hall_sensor";	
+	};	
+/*added by chenhui for goodix fingerprint*/
+    goodix@0 {
+        compatible = "goodix,fingerprint";
+        spi-max-frequency = <4800000>;
+        interrupt-parent = <&tlmm>;
+        interrupts = <97 0x0>;
+        goodix,gpio_pwr3v3 = <&tlmm 95 0>;
+        goodix,gpio_pwrvdd = <&tlmm 94 0>;		
+        goodix,gpio_reset = <&tlmm 98 0>;
+        goodix,gpio_irq = <&tlmm 97 0>;
+    }; 
+/*added by chenhui for goodix fingerprint*/	
+
+    gen-vkeys {
+		compatible = "qcom,gen-vkeys";
+		label = "fts_ts";
+		qcom,disp-maxx = <719>;
+		qcom,disp-maxy = <1279>;
+		qcom,panel-maxx = <719>;
+		qcom,panel-maxy = <1280>;
+		qcom,key-codes = <158 172 139>;
+	};
 };
 
 &blsp1_uart2 {
@@ -76,38 +153,20 @@
 };
 
 &pmi_haptic{
-	qcom,wave-play-rate-us = <4165>;
-	qcom,actuator-type = "lra";
-	qcom,lra-auto-res-mode="qwd";
-	qcom,lra-high-z="opt1";
-	qcom,lra-res-cal-period = <4>;
-	qcom,correct-lra-drive-freq;
-	qcom,misc-trim-error-rc19p2-clk-reg-present;
+	qcom,actuator-type = "erm";
 };
-
-&spi_3 { /* BLSP1 QUP3 */
-	maxim_sti@0 {
-		status = "disabled";
-		compatible = "maxim,maxim_sti";
-		reg = <0>;
-		interrupt-parent = <&tlmm>;
-		interrupts = <65 0>;
-		spi-max-frequency = <16000000>;
-		avdd-supply = <&pm8937_l10>;
-		dvdd-supply = <&pm8937_l5>;
-		maxim_sti,irq-gpio = <&tlmm 65 0x00>;
-		maxim_sti,reset-gpio = <&tlmm 64 0x00>;
-		maxim_sti,touch_fusion = "/vendor/bin/touch_fusion";
-		maxim_sti,config_file = "/etc/firmware/qtc800s.cfg";
-		maxim_sti,fw_name = "qtc800s.bin";
-		pinctrl-names = "pmx_ts_active","pmx_ts_suspend",
-			"pmx_ts_release";
-		pinctrl-0 = <&ts_int_active &ts_reset_active>;
-		pinctrl-1 = <&ts_int_suspend &ts_reset_suspend>;
-		pinctrl-2 = <&ts_release>;
-	};
+//lll054850 add for aw87319 20161128
+&i2c_2 {
+		aw87319_i2c@58{
+	        compatible = "awinic,aw87319_pa";
+	        reg = <0x58>;
+	        awinic,ext_pa_spk_aw87319_rst = <&tlmm 68 0x01>;
+	        pinctrl-names = "aw87319_pa_active", "aw87319_pa_off";
+	        pinctrl-0 = <&aw87319_rst_high>;
+	        pinctrl-1 = <&aw87319_rst_low>;	
+        };
 };
-
+//lll054850 add for aw87319 20161128
 &i2c_5 { /* BLSP2 QUP1 */
 	nq@28 {
 		compatible = "qcom,nq-nci";
@@ -177,7 +236,7 @@
 		1 &intc 0 221 0
 		2 &tlmm 67 0>;
 	interrupt-names = "hc_irq", "pwr_irq", "status_irq";
-	cd-gpios = <&tlmm 67 0x1>;
+	cd-gpios = <&tlmm 67 0x0>;
 
 	qcom,clk-rates = <400000 20000000 25000000 50000000 100000000
 								200000000>;
@@ -208,18 +267,19 @@
 &mdss_dsi {
 	hw-config = "single_dsi";
 };
-
+//modify by yujianhua start
 &mdss_dsi0 {
-	qcom,dsi-pref-prim-pan = <&dsi_truly_1080_vid>;
+	qcom,dsi-pref-prim-pan = <&dsi_hx8399c_lead_1080p_video>;
 	pinctrl-names = "mdss_default", "mdss_sleep";
 	pinctrl-0 = <&mdss_dsi_active &mdss_te_active>;
 	pinctrl-1 = <&mdss_dsi_suspend &mdss_te_suspend>;
 
 	qcom,platform-te-gpio = <&tlmm 24 0>;
-	qcom,platform-enable-gpio = <&tlmm 99 0>;
+	//qcom,platform-enable-gpio = <&tlmm 99 0>;
 	qcom,platform-reset-gpio = <&tlmm 60 0>;
-	qcom,platform-bklight-en-gpio = <&tlmm 98 0>;
+	//qcom,platform-bklight-en-gpio = <&tlmm 98 0>;
 };
+//modify by yujianhua end
 
 &mdss_dsi1 {
 	status = "disabled";
@@ -251,6 +311,40 @@
 	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
 	qcom,mdss-dsi-pan-enable-dynamic-fps;
 	qcom,mdss-dsi-pan-fps-update = "dfps_immediate_porch_mode_vfp";
+};
+
+//add by yujianhua start
+&dsi_hx8394f_jdf_720p_video {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+};
+&dsi_nt35521_dijing_720_vid {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+};
+//add by yujianhua end
+
+//add by zhanglian start
+&dsi_hx8399c_lead_1080p_video {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+};
+//add by zhanglian end
+
+&dsi_otm1911a_1080p_video {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+};
+
+&dsi_td4300_boe_1080p_video {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+};
+
+&dsi_td4310_tianma_1080p_video {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+};
+
+&dsi_ili9881c_skyworth_720p_video {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
+};
+&dsi_ili9881c_lcetron_720p_video {
+	qcom,panel-supply-entries = <&dsi_panel_pwr_supply>;
 };
 
 /* PM8937 GPIO configuration */
