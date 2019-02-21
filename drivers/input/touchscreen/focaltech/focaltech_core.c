@@ -606,7 +606,7 @@ static void fts_report_value(struct fts_ts_data *data)
 			input_mt_report_slot_state(data->input_dev, MT_TOOL_FINGER, false);
 			//input_report_key(data->input_dev, BTN_TOUCH, 0);
 			data->touchs &= ~BIT(event->au8_finger_id[i]);
-                        #if ZFG_FASTMMI_PV
+                        #if defined (ZFG_FASTMMI_PV)
                         input_sync(data->input_dev); // zz
                         #endif
 		}

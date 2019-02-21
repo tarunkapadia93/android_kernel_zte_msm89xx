@@ -481,8 +481,37 @@ struct input_keymap_entry {
 
 #define KEY_MICMUTE		248	/* Mute / unmute the microphone */
 
-/* Code 255 is reserved for special needs of AT keyboard driver */
+/* add start by jiangchong for Hall sensor driver,20141212*/
+#define KEY_HALL_SENSOR_DOWN	249
+#define KEY_HALL_SENSOR_UP	 250
+/* add end by jiangchong for Hall sensor driver,20141212*/
 
+/*add by chenhui for fingerprint key, begin*/
+
+#define  KEY_FINGER_UP        251
+#define  KEY_FINGER_DOWN      252
+#define  KEY_FINGER_LEFT      253
+#define  KEY_FINGER_RIGHT     254
+
+/*add by chenhui for fingerprint key, end*/
+
+/* Code 255 is reserved for special needs of AT keyboard driver */
+/* add by wangkuihua for touch gesture begin */
+#define KEY_GESTURE_DOUBLEC 605
+#define KEY_GESTURE_O	 606
+#define KEY_GESTURE_E	 607
+#define KEY_GESTURE_M	 608
+#define KEY_GESTURE_L	 609
+#define KEY_GESTURE_W	 610
+#define KEY_GESTURE_UP	 611
+#define KEY_GESTURE_DOWN	 612
+#define KEY_GESTURE_LEFT	 613
+#define KEY_GESTURE_RIGHT	 614
+#define KEY_GESTURE_S	 615
+#define KEY_GESTURE_V	 616
+#define KEY_GESTURE_Z	 617
+#define KEY_GESTURE_U	 618
+/* add by wangkuihua for touch gesture end */
 #define BTN_MISC		0x100
 #define BTN_0			0x100
 #define BTN_1			0x101
