@@ -28,3 +28,6 @@ obj-$(CONFIG_INPUT_APMPOWER)	+= apm-power.o
 obj-$(CONFIG_INPUT_KEYRESET)	+= keyreset.o
 obj-$(CONFIG_INPUT_KEYCOMBO)	+= keycombo.o
 
+#added by chenhui for fingerprint
+obj-$(CONFIG_FINGERPRINT_GF5216) += fingerprint/goodix/
+obj-$(CONFIG_FINGERPRINT_GF3238) += fingerprint/goodix-3238/
