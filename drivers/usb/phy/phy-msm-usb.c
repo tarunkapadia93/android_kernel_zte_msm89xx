@@ -1824,7 +1824,9 @@ static void msm_otg_notify_charger(struct msm_otg *motg, unsigned mA)
 
 	motg->cur_power = mA;
 }
-
+//zz 1 total 7
+static int skip_invalid_chg_work = 0;
+//zz 1
 static int msm_otg_set_power(struct usb_phy *phy, unsigned mA)
 {
 	struct msm_otg *motg = container_of(phy, struct msm_otg, phy);
@@ -1836,9 +1838,18 @@ static int msm_otg_set_power(struct usb_phy *phy, unsigned mA)
 	 * IDEV_CHG can be drawn irrespective of suspend/un-configured
 	 * states when CDP/ACA is connected.
 	 */
-	if (motg->chg_type == USB_SDP_CHARGER)
+pr_err("msm_otg_set_power motg->chg_type = %d,mA = %d \n",motg->chg_type,mA);
+	if (motg->chg_type == USB_SDP_CHARGER){
+//zz 2
+		pr_info("usb %s mA:%d\n",__func__,mA);
+		/*wall charger in which D+/D- disconnected 
+			would be recognized as usb cable, 2/7*/
+		skip_invalid_chg_work = 1;
+		//cancel_delayed_work_sync(&motg->invalid_chg_work);
+		/*end*/
 		msm_otg_notify_charger(motg, mA);
-
+		}
+//zz 2
 	return 0;
 }
 
@@ -2589,6 +2600,20 @@ static void msm_chg_detect_work(struct work_struct *w)
 	msm_otg_dbg_log_event(phy, "CHG WORK: QUEUE", motg->chg_type, delay);
 	queue_delayed_work(motg->otg_wq, &motg->chg_work, delay);
 }
+//zz 3
+/*wall charger in which D+/D- disconnected would be recognized as usb cable 3/7*/
+static void msm_invalid_chg_work(struct work_struct *w)
+{
+	struct msm_otg *motg = container_of(w, struct msm_otg, invalid_chg_work.work);	
+	if(skip_invalid_chg_work){
+		skip_invalid_chg_work = 0;
+		return;
+		}
+	printk(KERN_ERR"msm_otg : %s, %d\n",__FUNCTION__,__LINE__);
+	msm_otg_notify_charger(motg, 500); //>500mA
+}
+/*end*/
+//zz 3
 
 #define VBUS_INIT_TIMEOUT	msecs_to_jiffies(5000)
 
@@ -2831,6 +2856,18 @@ static void msm_otg_sm_work(struct work_struct *w)
 							IDEV_CHG_MAX);
 					/* fall through */
 				case USB_SDP_CHARGER:
+//zz 4
+					/*wall charger in which D+/D- disconnected 
+					would be recognized as usb cable, 4/7*/
+					schedule_delayed_work(&motg->invalid_chg_work, 3*HZ);
+					/*end*/
+//zz 4
+// motg->invalid_chg_work,针对某些PC上USB充电异常添加,例如笔记本休眠时,连接USB充电,因PC处于休眠状态
+// udc部分不会触发连接中断,msm_otg_set_power函数不会被调用,也不会notify给充电模块,故对充电流程有所影响
+// 所以有出现无充电图标或者关机充电时不停重启的故障.
+// 在此添加无效充电检测代码,当SDP充电时,主动设置充电电流500mA,将后续流程走通
+// invalid_chg_work的添加,使得SDP充电不再依赖PC对终端的枚举,只要接入PC 且 PC能向外部供电,即可以启动SDP充电
+// 正常枚举的情况下,会修改标志位disable掉invalid_chg_work,见2/7
 					pm_runtime_get_sync(otg->phy->dev);
 					msm_otg_start_peripheral(otg, 1);
 					otg->phy->state =
@@ -2852,6 +2889,12 @@ static void msm_otg_sm_work(struct work_struct *w)
 			del_timer_sync(&motg->chg_check_timer);
 			clear_bit(B_FALSE_SDP, &motg->inputs);
 			cancel_delayed_work_sync(&motg->chg_work);
+//zz 5
+                        /*wall charger in which D+/D- disconnected would be recognized as usb cable, 5/7*/
+			cancel_delayed_work_sync(&motg->invalid_chg_work);
+			skip_invalid_chg_work = 0;
+			/*end*/			
+//zz 5
 			/*
 			 * Find out whether chg_w couldn't start or finished.
 			 * In both the cases, runtime ref_count vote is missing
@@ -4681,6 +4724,11 @@ static int msm_otg_probe(struct platform_device *pdev)
 	INIT_DELAYED_WORK(&motg->chg_work, msm_chg_detect_work);
 	INIT_DELAYED_WORK(&motg->id_status_work, msm_id_status_w);
 	INIT_DELAYED_WORK(&motg->perf_vote_work, msm_otg_perf_vote_work);
+//zz 6
+        /*wall charger in which D+/D- disconnected would be recognized as usb cable,6/7*/
+	INIT_DELAYED_WORK(&motg->invalid_chg_work, msm_invalid_chg_work);
+	/*end*/
+//zz 6
 	setup_timer(&motg->chg_check_timer, msm_otg_chg_check_timer_func,
 				(unsigned long) motg);
 	motg->otg_wq = alloc_ordered_workqueue("k_otg", 0);
@@ -5014,6 +5062,12 @@ static int msm_otg_remove(struct platform_device *pdev)
 	cancel_delayed_work_sync(&motg->id_status_work);
 	cancel_delayed_work_sync(&motg->perf_vote_work);
 	msm_otg_perf_vote_update(motg, false);
+//zz 7
+        /*wall charger in which D+/D- disconnected would be recognized as usb cable 7/7*/
+	cancel_delayed_work_sync(&motg->invalid_chg_work);
+	skip_invalid_chg_work = 0;
+	/*end*/
+//zz 7
 	cancel_work_sync(&motg->sm_work);
 	destroy_workqueue(motg->otg_wq);
 
