@@ -25,7 +25,9 @@
 
 #include "mdss_dsi.h"
 #include "mdss_dba_utils.h"
-
+//lixuetao add for read panel info
+#include <linux/proc_fs.h>
+//end
 #define DT_CMD_HDR 6
 #define MIN_REFRESH_RATE 48
 #define DEFAULT_MDP_TRANSFER_TIME 14000
@@ -33,6 +35,56 @@
 #define VSYNC_DELAY msecs_to_jiffies(17)
 
 DEFINE_LED_TRIGGER(bl_led_trigger);
+
+//lixuetao add for read panel info
+static struct proc_dir_entry * d_entry;
+static char  module_name[50]={"0"};
+static int blmax_lcm_12bit=0x0;      //modify by yujianhua start for V8 hx8399c lcm bl level 0xfff
+static int lcm_reset_high_insleep=0x0;		//modify by yujianhua start for f10 lcm rst high in sleep mode
+static int mdss_dsi_panel_lcd_proc_show(struct seq_file *m, void *v)
+{
+	seq_printf(m, "%s\n", module_name);
+	return 0;
+}
+
+static int mdss_dsi_panel_lcd_proc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, mdss_dsi_panel_lcd_proc_show, NULL);
+}
+
+static const struct file_operations mdss_dsi_panel_lcd_proc_fops = {
+	.owner		= THIS_MODULE,
+	.open		= mdss_dsi_panel_lcd_proc_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+void  mdss_dsi_panel_lcd_proc(struct device_node *node)
+{
+    const char * panel_name ;
+	d_entry = proc_create_data("msm_lcd", 0, NULL, &mdss_dsi_panel_lcd_proc_fops, NULL);
+
+	panel_name = of_get_property(node,	"zfg,lcd-proc-panel-name", NULL);
+	if (!panel_name)
+	{
+	    pr_info("LCD %s:%d, panel name not found!\n",__func__, __LINE__);
+		strcpy(module_name,"0");
+	}
+	else
+	{
+	    pr_info("LCD%s: Panel Name = %s\n", __func__, panel_name);
+		strcpy(module_name,panel_name);
+	}
+
+	if (!strcmp(panel_name, "zfgSkyworth(ili9881c)_720*1280-5.0Inch")||!strcmp(panel_name, "zfgLcetron(ili9881c)_720*1280-5.0Inch"))
+	{
+        blmax_lcm_12bit=0x1;
+		lcm_reset_high_insleep=0x0;
+	}
+
+}
+//lixuetao add for read panel info end
 
 void mdss_dsi_panel_pwm_cfg(struct mdss_dsi_ctrl_pdata *ctrl)
 {
@@ -194,11 +246,33 @@ static struct dsi_cmd_desc backlight_cmd = {
 	{DTYPE_DCS_WRITE1, 1, 0, 0, 1, sizeof(led_pwm1)},
 	led_pwm1
 };
+//add by yujianhua for dcs backlight ctrl brightness
+static char led_dcs1[3] = {0x51,0x00,0x00};
+static struct dsi_cmd_desc backlight_cmd_dcsl = {
+	{DTYPE_DCS_LWRITE, 1, 0, 0, 1, sizeof(led_dcs1)},//DTYPE_DCS_WRITE1
+	led_dcs1
+};
 
+static char led_dcs2[2] = {0x53, 0x0};
+static struct dsi_cmd_desc backlight_cmd_dcs2 = {
+	{DTYPE_DCS_WRITE1, 1, 0, 0, 1, sizeof(led_dcs2)},
+	led_dcs2
+};
+
+static char led_cabc1[2] = {0x55, 0x0};	/* DTYPE_DCS_WRITE1 */
+static struct dsi_cmd_desc backlight_cmd_cabc = {
+	{DTYPE_DCS_WRITE1, 1, 0, 0, 1, sizeof(led_cabc1)},
+	led_cabc1
+};
+static u8 lcm_is_minbright=0; //if lcm is minute bright
+static u8 lcm_cabc_on=1;       //if lcm is cabc on
+//add by yujianhua for dcs backlight ctrl brightness end
 static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 {
 	struct dcs_cmd_req cmdreq;
 	struct mdss_panel_info *pinfo;
+
+    static u32 bldcs_level_last = 0xFF;//add by yujianhua for cabc exit sleep start
 
 	pinfo = &(ctrl->panel_data.panel_info);
 	if (pinfo->dcs_cmd_by_left) {
@@ -206,18 +280,98 @@ static void mdss_dsi_panel_bklt_dcs(struct mdss_dsi_ctrl_pdata *ctrl, int level)
 			return;
 	}
 
-	pr_debug("%s: level=%d\n", __func__, level);
-
+    if(blmax_lcm_12bit==0x1)
+	{
+		if ( (level <= 160) && (level > 0))
+		{
+		level = 80;
+			lcm_is_minbright=1;
+		}
+		else if(level!=0)
+		{
+			lcm_is_minbright=0;
+		}
+		led_dcs1[1] = (unsigned char)(level>>8)&0x0f;
+		led_dcs1[2] = (unsigned char)level&0xff;
+		//printk("%s:MAXLCM12bit level=%d,cabc=%d,minb=%d\n", __func__, level,lcm_cabc_on,lcm_is_minbright);
+	}
+	else
+	{
+		if ( (level <= 10) && (level > 0))
+		{
+		level = 4;
+			lcm_is_minbright=1;
+		}
+		else if(level!=0)
+		{
+			lcm_is_minbright=0;
+		}
 	led_pwm1[1] = (unsigned char)level;
+        //printk("%s: level=%d,cabc=%d,minb=%d\n", __func__, level,lcm_cabc_on,lcm_is_minbright);
+	}
 
 	memset(&cmdreq, 0, sizeof(cmdreq));
+
+//add by yujianhua for cabc exit sleep start
+//if(ctrl->bklt_ctrl == BL_DCS_WLED)
+//{
+    if (led_dcs2[1] == 0x2C) {
+		cmdreq.cmds = &backlight_cmd_dcs2;
+		cmdreq.cmds_cnt = 1;
+		cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL;
+		cmdreq.rlen = 0;
+		cmdreq.cb = NULL;
+		mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+              printk("%s,led_dcs2\n", __func__);
+              led_dcs2[1] = 0x0;
+    }
+    if ((bldcs_level_last == 0)&&(level != 0)) {
+		led_dcs2[1] = 0x2C;
+    }
+    bldcs_level_last=level;
+//}
+//add by yujianhua for cabc exit sleep end
+
+	if(blmax_lcm_12bit==0x1)
+	{
+		cmdreq.cmds = &backlight_cmd_dcsl;
+	}
+	else
+	{
 	cmdreq.cmds = &backlight_cmd;
+	}
 	cmdreq.cmds_cnt = 1;
 	cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL;
 	cmdreq.rlen = 0;
 	cmdreq.cb = NULL;
 
 	mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+
+//add by yujianhua for dcs backlight ctrl minimum brightness start
+//NOTICE not all IC can change mode during operation,need fae to check
+	if((lcm_is_minbright==1)&&(lcm_cabc_on==1))
+	{
+		led_cabc1[1] = 0x0;
+		cmdreq.cmds = &backlight_cmd_cabc;
+		cmdreq.cmds_cnt = 1;
+		cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL;
+		cmdreq.rlen = 0;
+		cmdreq.cb = NULL;
+		mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+		lcm_cabc_on=0;
+	}
+	else if((lcm_is_minbright==0)&&(lcm_cabc_on==0))
+	{
+		led_cabc1[1] = 0x1;
+		cmdreq.cmds = &backlight_cmd_cabc;
+		cmdreq.cmds_cnt = 1;
+		cmdreq.flags = CMD_REQ_COMMIT | CMD_CLK_CTRL;
+		cmdreq.rlen = 0;
+		cmdreq.cb = NULL;
+		mdss_dsi_cmdlist_put(ctrl, &cmdreq);
+		lcm_cabc_on=1;
+	}
+//add by yujianhua for dcs backlight ctrl minimum brightness end
 }
 
 static int mdss_dsi_request_gpios(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
@@ -381,7 +535,20 @@ int mdss_dsi_panel_reset(struct mdss_panel_data *pdata, int enable)
 			gpio_set_value((ctrl_pdata->disp_en_gpio), 0);
 			gpio_free(ctrl_pdata->disp_en_gpio);
 		}
-		gpio_set_value((ctrl_pdata->rst_gpio), 0);
+		//modify by yujianhua start for F10 lcm rst high in sleep mode
+
+			if(lcm_reset_high_insleep==0x1)
+			{
+				printk("%s: LCM reset high\n", __func__);
+				gpio_set_value((ctrl_pdata->rst_gpio), 1);
+			}
+			else
+			{
+				printk("%s: LCM reset low\n", __func__);
+				gpio_set_value((ctrl_pdata->rst_gpio), 0);
+			}
+
+		//modify by yujianhua start for F10 lcm rst high in sleep mode
 		gpio_free(ctrl_pdata->rst_gpio);
 		if (gpio_is_valid(ctrl_pdata->mode_gpio))
 			gpio_free(ctrl_pdata->mode_gpio);
@@ -651,7 +818,9 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 		pr_err("%s: Invalid input data\n", __func__);
 		return;
 	}
-
+//modify by yujianhua for lcm level print start
+    printk("mdss_dsi_panel_bl_ctrl, bl_level=%d\n", bl_level);
+//modify by yujianhua for lcm level print end
 	ctrl_pdata = container_of(pdata, struct mdss_dsi_ctrl_pdata,
 				panel_data);
 
@@ -695,6 +864,23 @@ static void mdss_dsi_panel_bl_ctrl(struct mdss_panel_data *pdata,
 				mdss_dsi_panel_bklt_dcs(sctrl, bl_level);
 		}
 		break;
+  //add by yujianhua for a new backlight ctrl start
+	case BL_DCS_WLED:
+		if (!mdss_dsi_sync_wait_enable(ctrl_pdata)) {
+			mdss_dsi_panel_bklt_dcs(ctrl_pdata, bl_level);
+			//break;
+		}
+        if(bl_level!=0)
+        {
+            led_trigger_event(bl_led_trigger, 4095);  //wled max level
+        }
+        else
+        {
+            led_trigger_event(bl_led_trigger, 0);
+        }
+
+		break;
+  //add by yujianhua for a new backlight ctrl end
 	default:
 		pr_err("%s: Unknown bl_ctrl configuration\n",
 			__func__);
@@ -1441,7 +1627,6 @@ static int mdss_dsi_parse_reset_seq(struct device_node *np,
 	}
 	return 0;
 }
-
 static bool mdss_dsi_cmp_panel_reg_v2(struct mdss_dsi_ctrl_pdata *ctrl)
 {
 	int i, j;
@@ -1453,11 +1638,29 @@ static bool mdss_dsi_cmp_panel_reg_v2(struct mdss_dsi_ctrl_pdata *ctrl)
 	for (i = 0; i < ctrl->status_cmds.cmd_cnt; i++)
 		len += lenp[i];
 
+
 	for (j = 0; j < ctrl->groups; ++j) {
 		for (i = 0; i < len; ++i) {
-			if (ctrl->return_buf[i] !=
-				ctrl->status_value[group + i])
+ //add by yujianhua for esd read 52H start
+ //pr_err("mdss_dsi_cmp_panel_reg_v2  cmd=%x,,len=%d,buf=%x,%x groups=%d,i=%d,j=%d\n",ctrl->status_cmds.cmds[i].payload[0] ,len,ctrl->return_buf[i] ,ctrl->status_value[group + i],ctrl->groups,i,j);
+                     if(ctrl->status_cmds.cmds[i].payload[0] == 0x52)
+	{
+                        if(ctrl->return_buf[i] == 0x0)
+		{
+                            pr_err("mdss_dsi_cmp_panel_reg_v2 52h incorrect i=%d\n",i);//modify by yujianhua for esd value
+                            return false;
+                        }
+                        else
+			{
+                            continue;
+				}
+			}
+//add by yujianhua for esd read 52H end
+			if (ctrl->return_buf[i] != ctrl->status_value[group + i])
+            {
+				pr_err("mdss_dsi_cmp_panel_reg_v2 incorrect buf=%x,%x,i=%d\n",ctrl->return_buf[i] ,ctrl->status_value[group + i],i);//modify by yujianhua for esd value
 				break;
+			}
 		}
 
 		if (i == len)
@@ -2032,6 +2235,13 @@ int mdss_panel_parse_bl_settings(struct device_node *np,
 			pr_debug("%s: Configured DCS_CMD bklt ctrl\n",
 								__func__);
 		}
+             //add by yujianhua for dcs_wled mode start
+             else if (!strcmp(data, "bl_ctrl_dcs_wled")) {
+			led_trigger_register_simple("bkl-trigger",&bl_led_trigger);
+			ctrl_pdata->bklt_ctrl = BL_DCS_WLED;
+			pr_debug("%s: Configured DCS_WLED bklt ctrl\n",__func__);
+		}
+             //add by yujianhua for dcs_wled mode end
 	}
 	return 0;
 }
@@ -2080,7 +2290,7 @@ int mdss_dsi_panel_timing_switch(struct mdss_dsi_ctrl_pdata *ctrl,
 
 void mdss_dsi_unregister_bl_settings(struct mdss_dsi_ctrl_pdata *ctrl_pdata)
 {
-	if (ctrl_pdata->bklt_ctrl == BL_WLED)
+	if ((ctrl_pdata->bklt_ctrl == BL_WLED)||(ctrl_pdata->bklt_ctrl == BL_DCS_WLED)) //modify by yujianhua for BL_DCS_WLED mode
 		led_trigger_unregister_simple(bl_led_trigger);
 }
 
@@ -2583,6 +2793,7 @@ int mdss_dsi_panel_init(struct device_node *node,
 	ctrl_pdata->low_power_config = mdss_dsi_panel_low_power_config;
 	ctrl_pdata->panel_data.set_backlight = mdss_dsi_panel_bl_ctrl;
 	ctrl_pdata->switch_mode = mdss_dsi_panel_switch_mode;
-
+	//lixuetao add for read panel info
+	mdss_dsi_panel_lcd_proc(node);
 	return 0;
 }
