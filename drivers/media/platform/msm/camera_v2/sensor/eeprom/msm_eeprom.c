@@ -20,7 +20,8 @@
 
 #undef CDBG
 #define CDBG(fmt, args...) pr_debug(fmt, ##args)
-
+extern void msm_sensorinfo_set_back_sensor_module_id(uint16_t module_id);
+extern void msm_sensor_set_back_sensor_module_id(uint16_t module_id);
 DEFINE_MSM_MUTEX(msm_eeprom_mutex);
 #ifdef CONFIG_COMPAT
 static struct v4l2_file_operations msm_eeprom_v4l2_subdev_fops;
@@ -961,6 +962,8 @@ static int msm_eeprom_get_dt_data(struct msm_eeprom_ctrl_t *e_ctrl)
 			spi_client->spi_master->dev.of_node;
 	else if (e_ctrl->eeprom_device_type == MSM_CAMERA_PLATFORM_DEVICE)
 		of_node = e_ctrl->pdev->dev.of_node;
+	else if (e_ctrl->eeprom_device_type == MSM_CAMERA_I2C_DEVICE)
+		of_node = e_ctrl->i2c_client.client->dev.of_node;
 
 	if (!of_node) {
 		pr_err("%s: %d of_node is NULL\n", __func__ , __LINE__);
@@ -1518,7 +1521,7 @@ static int msm_eeprom_config32(struct msm_eeprom_ctrl_t *e_ctrl,
 		if (e_ctrl->userspace_probe == 0) {
 			pr_err("%s:%d Eeprom already probed at kernel boot",
 				__func__, __LINE__);
-			rc = -EINVAL;
+			rc = 0;//-EINVAL;//return 0 for boot eeprom
 			break;
 		}
 		if (e_ctrl->cal_data.num_data == 0) {
@@ -1581,7 +1584,7 @@ static int msm_eeprom_platform_probe(struct platform_device *pdev)
 	int rc = 0;
 	int j = 0;
 	uint32_t temp;
-
+        uint16_t  sensor_module_id = 0;
 	struct msm_camera_cci_client *cci_client = NULL;
 	struct msm_eeprom_ctrl_t *e_ctrl = NULL;
 	struct msm_eeprom_board_info *eb_info = NULL;
@@ -1685,7 +1688,11 @@ static int msm_eeprom_platform_probe(struct platform_device *pdev)
 			pr_err("%s failed rc %d\n", __func__, rc);
 			goto board_free;
 		}
-
+/**
+  * Remove i2c-freq-mode property
+  * Dts has no i2c-freq-mode property,and need to remove it.
+  */
+#if 0
 		rc = of_property_read_u32(of_node, "qcom,i2c-freq-mode",
 			&e_ctrl->i2c_freq_mode);
 		CDBG("qcom,i2c_freq_mode %d, rc %d\n",
@@ -1700,10 +1707,11 @@ static int msm_eeprom_platform_probe(struct platform_device *pdev)
 				__func__, __LINE__, e_ctrl->i2c_freq_mode);
 			e_ctrl->i2c_freq_mode = 0;
 		}
+#endif
 		eb_info->i2c_slaveaddr = temp;
 		CDBG("qcom,slave-addr = 0x%X\n", eb_info->i2c_slaveaddr);
-		eb_info->i2c_freq_mode = e_ctrl->i2c_freq_mode;
-		cci_client->i2c_freq_mode = e_ctrl->i2c_freq_mode;
+		//eb_info->i2c_freq_mode = e_ctrl->i2c_freq_mode;
+		//cci_client->i2c_freq_mode = e_ctrl->i2c_freq_mode;
 		cci_client->sid = eb_info->i2c_slaveaddr >> 1;
 
 		rc = msm_eeprom_parse_memory_map(of_node, &e_ctrl->cal_data);
@@ -1721,6 +1729,13 @@ static int msm_eeprom_platform_probe(struct platform_device *pdev)
 			pr_err("%s read_eeprom_memory failed\n", __func__);
 			goto power_down;
 		}
+               if(strcmp(eb_info->eeprom_name,"zfg_gt24c64a")==0){
+	            sensor_module_id = e_ctrl->cal_data.mapdata[2];
+                    if(sensor_module_id==0x0||sensor_module_id==0xFF)
+                    sensor_module_id = 0x06;
+                    msm_sensorinfo_set_back_sensor_module_id(sensor_module_id);
+		    msm_sensor_set_back_sensor_module_id	(sensor_module_id);	
+                }
 		for (j = 0; j < e_ctrl->cal_data.num_data; j++)
 			CDBG("memory_data[%d] = 0x%X\n", j,
 				e_ctrl->cal_data.mapdata[j]);
@@ -1817,6 +1832,13 @@ static const struct of_device_id msm_eeprom_dt_match[] = {
 
 MODULE_DEVICE_TABLE(of, msm_eeprom_dt_match);
 
+static const struct of_device_id msm_eeprom_i2c_dt_match[] = {
+	{ .compatible = "qcom,eeprom" },
+	{ }
+};
+
+MODULE_DEVICE_TABLE(of, msm_eeprom_i2c_dt_match);
+
 static struct platform_driver msm_eeprom_platform_driver = {
 	.driver = {
 		.name = "qcom,eeprom",
@@ -1838,6 +1860,8 @@ static struct i2c_driver msm_eeprom_i2c_driver = {
 	.remove = msm_eeprom_i2c_remove,
 	.driver = {
 		.name = "msm_eeprom",
+		.owner = THIS_MODULE,
+		.of_match_table = msm_eeprom_i2c_dt_match,
 	},
 };
 

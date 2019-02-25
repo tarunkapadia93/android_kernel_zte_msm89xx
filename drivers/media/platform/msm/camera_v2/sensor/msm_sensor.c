@@ -17,9 +17,19 @@
 #include "msm_camera_i2c_mux.h"
 #include <linux/regulator/rpm-smd-regulator.h>
 #include <linux/regulator/consumer.h>
+#include <linux/semaphore.h>
+//#undef CDBG
+#define CDBG(fmt, args...) pr_err(fmt, ##args)
 
-#undef CDBG
-#define CDBG(fmt, args...) pr_debug(fmt, ##args)
+static uint16_t module_integrator_id = 0;
+DEFINE_SEMAPHORE(set_back_eeprom_module_id_sem);
+void msm_sensor_set_back_sensor_module_id(uint16_t module_id)
+{
+    down(&set_back_eeprom_module_id_sem);
+	module_integrator_id = module_id;
+    up(&set_back_eeprom_module_id_sem);
+}
+EXPORT_SYMBOL(msm_sensor_set_back_sensor_module_id);
 
 static void msm_sensor_adjust_mclk(struct msm_camera_power_ctrl_t *ctrl)
 {
@@ -235,6 +245,16 @@ int msm_sensor_match_id(struct msm_sensor_ctrl_t *s_ctrl)
 	rc = sensor_i2c_client->i2c_func_tbl->i2c_read(
 		sensor_i2c_client, slave_info->sensor_id_reg_addr,
 		&chipid, MSM_CAMERA_I2C_WORD_DATA);
+        if (strcmp(sensor_name,"imx258") == 0) 
+	{
+	   if(module_integrator_id!=0x15)
+	   	return -EINVAL; 
+	}
+        if (strcmp(sensor_name,"imx258qt") == 0) 
+	{
+	   if(module_integrator_id!=0x6)
+	   	return -EINVAL; 
+	}
 	if (rc < 0) {
 		pr_err("%s: %s: read id failed\n", __func__, sensor_name);
 		return rc;

@@ -29,7 +29,11 @@ static int32_t msm_sensor_driver_platform_probe(struct platform_device *pdev);
 
 /* Static declaration */
 static struct msm_sensor_ctrl_t *g_sctrl[MAX_CAMERAS];
-
+/**
+  * add sensor information in factory
+  */
+extern void msm_sensorinfo_set_back_sensor_id(uint16_t id);
+extern void msm_sensorinfo_set_front_sensor_id(uint16_t id);
 static int msm_sensor_platform_remove(struct platform_device *pdev)
 {
 	struct msm_sensor_ctrl_t  *s_ctrl;
@@ -923,7 +927,15 @@ CSID_TG:
 		pr_err("failed: camera creat v4l2 rc %d", rc);
 		goto camera_power_down;
 	}
+    if(CAMERA_0 == slave_info->camera_id )        
+	{            
+	   msm_sensorinfo_set_back_sensor_id(slave_info->sensor_id_info.sensor_id);      
+	}        
 
+	if(CAMERA_1 == slave_info->camera_id  ||CAMERA_2 == slave_info->camera_id  )        
+	{            
+	   msm_sensorinfo_set_front_sensor_id(slave_info->sensor_id_info.sensor_id);       
+	}
 	/* Power down */
 	s_ctrl->func_tbl->sensor_power_down(s_ctrl);
 
