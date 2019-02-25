@@ -263,6 +263,69 @@ static int enable_spk_ext_pa(struct snd_soc_codec *codec, int enable)
 {
 	struct snd_soc_card *card = codec->component.card;
 	struct msm8916_asoc_mach_data *pdata = snd_soc_card_get_drvdata(card);
+	#ifdef CONFIG_ZFG_AW8736_PA
+    int pa_mode = 3; // PA works in mode 3
+
+	if (!gpio_is_valid(pdata->spk_ext_pa_gpio)) {
+		pr_err("%s: Invalid gpio: %d\n", __func__,
+			pdata->spk_ext_pa_gpio);
+		return false;
+	}
+    pr_debug("%s: %s aw8736 PA\n", __func__,
+		enable ? "Enable" : "Disable");
+	if (enable) {
+			unsigned long flags;	
+			local_irq_save(flags);			
+			if(pa_mode == 1)
+			{
+				gpio_direction_output(pdata->spk_ext_pa_gpio, 1);
+				udelay(2);			
+			}
+			else if(pa_mode == 2)
+			{
+				gpio_direction_output(pdata->spk_ext_pa_gpio, 1);
+				udelay(2);
+				gpio_direction_output(pdata->spk_ext_pa_gpio, 0);
+				udelay(2);
+				gpio_direction_output(pdata->spk_ext_pa_gpio, 1);
+				udelay(2);
+			}
+			else if(pa_mode == 3)
+			{
+				gpio_direction_output(pdata->spk_ext_pa_gpio, 1);
+				udelay(2);
+				gpio_direction_output(pdata->spk_ext_pa_gpio, 0);
+				udelay(2);
+				gpio_direction_output(pdata->spk_ext_pa_gpio, 1);
+				udelay(2);
+				gpio_direction_output(pdata->spk_ext_pa_gpio, 0);
+				udelay(2);
+				gpio_direction_output(pdata->spk_ext_pa_gpio, 1);
+				udelay(2);
+			}
+			else if(pa_mode == 4)
+			{
+				gpio_direction_output(pdata->spk_ext_pa_gpio, 1);
+				udelay(2);
+				gpio_direction_output(pdata->spk_ext_pa_gpio, 0);
+				udelay(2);
+				gpio_direction_output(pdata->spk_ext_pa_gpio, 1);
+				udelay(2);
+				gpio_direction_output(pdata->spk_ext_pa_gpio, 0);
+				udelay(2);
+				gpio_direction_output(pdata->spk_ext_pa_gpio, 1);
+				udelay(2);
+			}			
+			else
+			{
+				gpio_direction_output(pdata->spk_ext_pa_gpio, 0);
+			}		
+			local_irq_restore(flags);		
+		} else {
+			gpio_direction_output(pdata->spk_ext_pa_gpio, 0);
+			/* time takes disable the external power amplifier */
+		}
+#else
 	int ret;
 
 	if (!gpio_is_valid(pdata->spk_ext_pa_gpio)) {
@@ -291,6 +354,7 @@ static int enable_spk_ext_pa(struct snd_soc_codec *codec, int enable)
 			return ret;
 		}
 	}
+#endif
 	return 0;
 }
 
