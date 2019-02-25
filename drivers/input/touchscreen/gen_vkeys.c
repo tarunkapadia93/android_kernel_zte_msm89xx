@@ -167,6 +167,31 @@ static int vkeys_probe(struct platform_device *pdev)
 		x1 = x2 + border;
 		x2 = x2 + border + width;
 		center_x = x1 + (x2 - x1) / 2;
+		//add by wkh begin
+		dev_info(&pdev->dev, "gen_vkeys,i = %d,center_x = %d,center_y = %d\n", i,center_x,center_y);
+		printk("gen_vkeys,i = %d,center_x = %d,center_y = %d\n", i,center_x,center_y);
+		if(i == 0)
+		{
+			center_x = 120;
+			center_y = 1350;
+			width = 170;
+			height = 130;
+		}
+		else if(i == 1)
+		{
+			center_x = 360;
+			center_y = 1350;
+			width = 170;
+			height = 130;
+		}
+		else if(i == 2)
+		{
+			center_x = 600;
+			center_y = 1350;
+			width = 170;
+			height = 130;
+		}
+		//end
 		c += snprintf(vkey_buf + c, MAX_BUF_SIZE - c,
 				"%s:%d:%d:%d:%d:%d\n",
 				VKEY_VER_CODE, pdata->keycodes[i],
